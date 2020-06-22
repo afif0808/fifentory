@@ -12,7 +12,6 @@ import (
 	stockrepo "fifentory/stock/repository"
 	stocksqlrepo "fifentory/stock/repository/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,6 +31,14 @@ func InjectSKUOutHandler(conn *sql.DB, ee *echo.Echo) {
 	addSKUStockQtyBySKUID := stocksqlrepo.AddStockQuantityBySKUID(conn)
 
 	ee.DELETE("/skuouts/:id", DeleteSKUOutByID(deleteSKUOutByID, addSKUStockQtyBySKUID, getSKUOutByID))
+
+	updateSKUOutByID := skuoutsqlrepo.UpdateSKUOutByID(conn)
+	ee.POST("/skuouts/:id", UpdateSKUOutByID(
+		updateSKUOutByID,
+		getSKUOutByID,
+		addSKUStockQtyBySKUID,
+		subtractStock))
+
 	ee.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -60,16 +67,16 @@ func CreateSKUOut(
 			ctx = context.Background()
 		}
 		err := ectx.Bind(&post)
-		log.Println(err)
 		if err != nil {
 			return ectx.JSON(http.StatusBadRequest, err)
 		}
-		if post.SKUOutGroup.Date == (time.Time{}) {
-			post.SKUOutGroup.Date = time.Now().Local()
-		}
+
 		if post.SKUOutGroup.ID == 0 {
 			if post.SKUOutGroup.CustomerID == 0 {
 				return ectx.JSON(http.StatusBadRequest, fmt.Errorf("Error : missing customer"))
+			}
+			if post.SKUOutGroup.Date == (time.Time{}) {
+				post.SKUOutGroup.Date = time.Now().Local()
 			}
 			*post.SKUOutGroup, err = createSKUOutGroup(ctx, *post.SKUOutGroup)
 			if err != nil {
@@ -83,7 +90,6 @@ func CreateSKUOut(
 			}
 			post.SKUOuts[i], err = createSKUOut(ctx, out)
 			if err != nil {
-				log.Println(err)
 				return ectx.JSON(http.StatusInternalServerError, err)
 			}
 			err = subractStock(ctx, out.SKUID, out.Quantity)
@@ -132,5 +138,57 @@ func GetSKUOuts(
 ) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
 		return nil
+	}
+}
+
+func UpdateSKUOutByID(
+	updateSKUOut skuoutrepo.UpdateSKUOutFunc,
+	getSKUOutByID skuoutrepo.GetSKUOUtByIDFunc,
+	addStockQuantityBySKUID stockrepo.AddStockQuantityBySKUIDFunc,
+	substractStockQuantityBySKUID stockrepo.SubtractStockQuantityBySKUIDFunc,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
+		var post struct {
+			SKUOut *skuout.SKUOut `json:"sku_out"`
+		}
+		err := ectx.Bind(&post)
+		if err != nil {
+			return ectx.JSON(http.StatusBadRequest, err)
+		}
+
+		id, err := strconv.ParseInt(ectx.Param("id"), 10, 64)
+		if err != nil {
+			return ectx.JSON(http.StatusBadRequest, err)
+		}
+		post.SKUOut.ID = id
+
+		skuOut, err := getSKUOutByID(ctx, id)
+		diff := skuOut.Quantity - post.SKUOut.Quantity
+		switch true {
+		case diff > 0:
+			err := addStockQuantityBySKUID(ctx, skuOut.SKUID, -diff)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+
+			break
+		case diff < 0:
+			err := substractStockQuantityBySKUID(ctx, skuOut.SKUID, diff)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+		}
+
+		err = updateSKUOut(ctx, *post.SKUOut)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+
+		return ectx.JSON(http.StatusOK, post.SKUOut)
 	}
 }

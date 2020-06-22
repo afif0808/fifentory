@@ -16,6 +16,7 @@ const (
 	getSKUOUtByIDQuery       = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE id = ? "
 	getSKUOutsQuery          = "SELECT " + skuOutFields + " FROM " + skutOutTable
 	getSKUOutsByGroupIdQuery = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE sku_out_group_id = ?"
+	updateSKUOutByIDQuery    = "UPDATE " + skutOutTable + " SET quantity = ? , date = ? , sku_id = ?, sku_out_group_id = ? " + " WHERE id = ? "
 )
 
 func CreateSKUOut(conn *sql.DB) skuoutrepo.CreateSKUOutFunc {
@@ -100,5 +101,21 @@ func GetSKUOutsByGroupId(conn *sql.DB) skuoutrepo.GetSKUOutsByGroupIDFunc {
 			return nil, err
 		}
 		return skuOuts, nil
+	}
+}
+func UpdateSKUOutByID(conn *sql.DB) skuoutrepo.UpdateSKUOutFunc {
+	return func(ctx context.Context, skuOut skuout.SKUOut) error {
+		res, err := conn.ExecContext(ctx, updateSKUOutByIDQuery, skuOut.Quantity, skuOut.Date, skuOut.SKUID, skuOut.GroupID, skuOut.ID)
+		if err != nil {
+			return err
+		}
+		ra, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if ra != 1 {
+			return errors.New("Error : something's wrong :D ")
+		}
+		return nil
 	}
 }

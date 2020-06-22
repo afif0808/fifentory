@@ -3,6 +3,7 @@ package skuresthandler
 import (
 	"context"
 	"database/sql"
+	"fifentory/options"
 	"fifentory/product"
 	productrepo "fifentory/product/repository"
 	productsqlrepo "fifentory/product/repository/sql"
@@ -31,10 +32,11 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct))
 	// getCategoryById := categorysqlrepo.GetCategoryByID(conn)
 	// getProductCategories := categorysqlrepo.GetProductCategories(conn, getCategoryById)
-	getProductById := productsqlrepo.GetProductByID(conn)
+	// getProductById := productsqlrepo.GetProductByID(conn)
+	getProducts := productsqlrepo.GetProducts(conn)
 	getSKUs := skusqlrepo.GetSKUs(conn)
 	getSKUStockBySKUID := stocksqlrepo.GetSKUStockBySKUID(conn)
-	ee.GET("/skus", GetSKUs(getSKUs, getProductById, getSKUStockBySKUID))
+	ee.GET("/skus", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
 	ee.DELETE("/skus/:id", DeleteSKUByID(deleteSKUByID))
@@ -106,7 +108,7 @@ func CreateSKUs(
 		return ectx.JSON(http.StatusCreated, posts)
 	}
 }
-func GetSKUs(
+func GetSKUs2(
 	getSKUs skurepo.GetSKUs,
 	getProduct productrepo.GetProductByIDFunc,
 	getStock stockrepo.GetSKUStockBySKUID,
@@ -116,7 +118,7 @@ func GetSKUs(
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		skus, err := getSKUs(ctx)
+		skus, err := getSKUs(ctx, nil)
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, err)
 		}
@@ -150,6 +152,63 @@ func GetSKUs(
 			resp = append(resp, svm)
 		}
 		return ectx.JSON(http.StatusOK, resp)
+	}
+}
+
+func GetSKUs(
+	getProducts productrepo.GetProductsFunc,
+	getSKUs skurepo.GetSKUs,
+	getSKUStockBySKUID stockrepo.GetSKUStockBySKUID,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+		}
+		var opts *options.Options
+		name := ectx.Request().URL.Query().Get("name")
+		if name != "" {
+			opts = &options.Options{}
+			ft := options.Filter{
+				By:       "name",
+				Value:    name,
+				Operator: "LIKE",
+			}
+			opts.Filters = []options.Filter{ft}
+		}
+		products, err := getProducts(ctx, opts)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		completeSKUs := []stockkeepingunit.CompleteSKU{}
+		for _, p := range products {
+			skuOpts := options.Options{}
+			skuProductFilter := options.Filter{
+				By:       "product_id",
+				Value:    p.ID,
+				Operator: "=",
+			}
+			skuOpts.Filters = []options.Filter{skuProductFilter}
+			skus, err := getSKUs(ctx, &skuOpts)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+			for _, sku := range skus {
+				st, err := getSKUStockBySKUID(ctx, sku.ID)
+				if err != nil {
+					return ectx.JSON(http.StatusInternalServerError, err)
+				}
+				cSKU := stockkeepingunit.CompleteSKU{
+					StockKeepingUnit: sku,
+					Product:          p,
+					Stock:            *st,
+				}
+				completeSKUs = append(completeSKUs, cSKU)
+			}
+		}
+		return ectx.JSON(http.StatusOK, completeSKUs)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fifentory/models"
+	"fifentory/options"
 	"fifentory/product"
 	productrepo "fifentory/product/repository"
 
@@ -79,10 +80,23 @@ func CreateProduct(
 
 func UpdateProductById(conn *sql.DB) productrepo.UpdateProductFunc {
 	return func(ctx context.Context, prod product.Product) (product.Product, error) {
-		_, err := conn.ExecContext(ctx, updateProductByIdQuery, prod.Name,prod.ID)
+		_, err := conn.ExecContext(ctx, updateProductByIdQuery, prod.Name, prod.ID)
 		if err != nil {
 			return (product.Product{}), err
 		}
 		return prod, nil
+	}
+}
+
+func GetProducts(conn *sql.DB) productrepo.GetProductsFunc {
+	return func(ctx context.Context, opts *options.Options) ([]product.Product, error) {
+		optionsQuery, optionsArgs := options.ParseOptionsToSQLQuery(opts)
+		query := " SELECT " + productFields + " FROM " + productTable + " " + optionsQuery
+		products, err := fetchProducts(conn, ctx, query, optionsArgs...)
+		if err != nil {
+			// logging goes here
+			return nil, err
+		}
+		return products, nil
 	}
 }

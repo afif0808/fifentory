@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fifentory/options"
 	"fifentory/stockkeepingunit"
 	skurepo "fifentory/stockkeepingunit/repository"
 )
@@ -63,8 +64,11 @@ func fetch(conn *sql.DB, ctx context.Context, query string, args ...interface{})
 func GetSKUs(
 	conn *sql.DB,
 ) skurepo.GetSKUs {
-	return func(ctx context.Context) ([]stockkeepingunit.StockKeepingUnit, error) {
-		skus, err := fetch(conn, ctx, getSKUsQuery)
+	return func(ctx context.Context, opts *options.Options) ([]stockkeepingunit.StockKeepingUnit, error) {
+
+		query, args := options.ParseOptionsToSQLQuery(opts)
+		query = getSKUsQuery + query
+		skus, err := fetch(conn, ctx, query, args...)
 		if err != nil {
 			// error logging goes here
 			return nil, err

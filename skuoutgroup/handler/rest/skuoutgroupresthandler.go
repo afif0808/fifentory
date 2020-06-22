@@ -63,7 +63,6 @@ func GetSKUOutGroups(
 			}
 
 		}
-		log.Println(customers, err)
 		type Response struct {
 			skuoutgroup.SKUOutGroup
 			Customer *customer.Customer `json:"customer"`

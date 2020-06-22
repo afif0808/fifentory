@@ -2,20 +2,31 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	customerresthandler "fifentory/customer/handler/rest"
 	productresthandler "fifentory/product/handler/rest"
 	skuoutresthandler "fifentory/skuout/handler/rest"
 	skuoutgroupresthandler "fifentory/skuoutgroup/handler/rest"
 	stockresthandler "fifentory/stock/handler/rest"
 	skuresthandler "fifentory/stockkeepingunit/handler/rest"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 )
 
 func main() {
-	conn, err := sql.Open("mysql", "root:@tcp(localhost:3306)/fiprosys?parseTime=true")
+	config := map[string]interface{}{}
+	configFile, err := os.Open("../src/fifentory/config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.NewDecoder(configFile).Decode(&config)
+
+	conn, err := sql.Open("mysql", "root:@tcp(localhost:3306)/"+fmt.Sprint(config["database"])+"?parseTime=true")
 	if err != nil {
 		log.Fatal(err)
 	}
