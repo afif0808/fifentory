@@ -12,6 +12,7 @@ type Filter struct {
 	By       string
 	Value    interface{}
 	Operator string // e.g : LIKE , = , > , < etc
+	Required bool // true means , where given multiple filters it should return true  
 }
 type Sorting struct {
 }
@@ -31,7 +32,7 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 			query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND")
 			args = append(args, ft.Value)
 		}
-		query = query[len(query)-3:]
+		query = query[:len(query)-3]
 	}
 	return
 }
