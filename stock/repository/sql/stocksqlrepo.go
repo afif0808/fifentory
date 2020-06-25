@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	skuStockFields               = "id,quantity"
+	skuStockFields               = "id,quantity,minimum_quantity"
 	skuStockTable                = "sku_stock"
-	createStockQuery             = "INSERT " + skuStockTable + " SET quantity = ? , sku_id = ?  "
+	createStockQuery             = "INSERT " + skuStockTable + " SET quantity = ? , sku_id = ? , minimum_quantity = ? "
 	getSKUStockBySKUIDQuery      = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE sku_id = ?"
-	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? WHERE id = ? "
+	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? WHERE id = ? , minimum_qty = ? "
 	addStockQuantityBySKUIDQuery = "UPDATE " + skuStockTable + " SET quantity = quantity + ? WHERE sku_id = ?"
 )
 

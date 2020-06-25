@@ -1,6 +1,10 @@
 package options
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"strings"
+)
 
 type Options struct {
 	Filters    []Filter
@@ -12,7 +16,7 @@ type Filter struct {
 	By       string
 	Value    interface{}
 	Operator string // e.g : LIKE , = , > , < etc
-	Required bool // true means , where given multiple filters it should return true  
+	Required bool   // false means , where given multiple filters it allowed to return false
 }
 type Sorting struct {
 }
@@ -27,12 +31,17 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 		query = " WHERE "
 		for _, ft := range opts.Filters {
 			if ft.Operator == "LIKE" {
-				ft.Value = fmt.Sprint("%", ft.Value, "%")
+				for _, v := range strings.Split(fmt.Sprint(ft.Value), " ") {
+					query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
+					args = append(args, fmt.Sprint("%", v, "%"))
+				}
+			} else {
+				query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
+				args = append(args, ft.Value)
 			}
-			query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND")
-			args = append(args, ft.Value)
 		}
-		query = query[:len(query)-3]
+		query = query[:len(query)-4]
+		log.Println(query)
 	}
 	return
 }

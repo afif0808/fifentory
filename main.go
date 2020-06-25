@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	customerresthandler "fifentory/customer/handler/rest"
 	productresthandler "fifentory/product/handler/rest"
+	skuinresthandler "fifentory/skuin/handler/rest"
 	skuoutresthandler "fifentory/skuout/handler/rest"
 	skuoutgroupresthandler "fifentory/skuoutgroup/handler/rest"
 	stockresthandler "fifentory/stock/handler/rest"
@@ -43,5 +44,6 @@ func main() {
 	customerresthandler.InjectCustomerRESTHandler(conn, ee)
 	skuoutgroupresthandler.InjectSKUOutGroupRESTHandler(conn, ee)
 	stockresthandler.InjectStockRESTHandler(conn, ee)
+	skuinresthandler.InjectSKUInRESTHandler(conn, ee)
 	ee.Start(":555")
 }
