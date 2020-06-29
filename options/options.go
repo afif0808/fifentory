@@ -2,7 +2,6 @@ package options
 
 import (
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -41,7 +40,6 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 			}
 		}
 		query = query[:len(query)-4]
-		log.Println(query)
 	}
 	return
 }

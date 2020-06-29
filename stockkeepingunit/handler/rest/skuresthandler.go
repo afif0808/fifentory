@@ -12,6 +12,7 @@ import (
 	stocksqlrepo "fifentory/stock/repository/sql"
 	"fifentory/stockkeepingunit"
 	skusqlrepo "fifentory/stockkeepingunit/repository/sql"
+	"log"
 	"strconv"
 
 	"gopkg.in/go-playground/validator.v9"
@@ -32,18 +33,23 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct))
 	// getCategoryById := categorysqlrepo.GetCategoryByID(conn)
 	// getProductCategories := categorysqlrepo.GetProductCategories(conn, getCategoryById)
-	// getProductById := productsqlrepo.GetProductByID(conn)
+	getProductByID := productsqlrepo.GetProductByID(conn)
 	getProducts := productsqlrepo.GetProducts(conn)
 	getSKUs := skusqlrepo.GetSKUs(conn)
 	getSKUStockBySKUID := stocksqlrepo.GetSKUStockBySKUID(conn)
 	ee.GET("/skus", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
-	ee.DELETE("/skus/:id", DeleteSKUByID(deleteSKUByID))
+	deleteStockBySKUID := stocksqlrepo.DeleteStockBySKUID(conn)
+	ee.DELETE("/skus/:id", DeleteSKUByID(deleteSKUByID, deleteStockBySKUID))
 
 	updateSKUByID := skusqlrepo.UpdateSKUByID(conn)
 
 	ee.POST("/skus/:id", UpdateSKUByID(updateSKUByID))
+
+	getRunningLowStocks := stocksqlrepo.GetRunningLowStocks(conn)
+	getSKUByID := skusqlrepo.GetSKUByID(conn)
+	ee.GET("/skus/lowstocks/", GetRunningLowStocks(getRunningLowStocks, getSKUByID, getProductByID))
 
 	ee.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
@@ -212,7 +218,10 @@ func GetSKUs(
 	}
 }
 
-func DeleteSKUByID(deleteSKU skurepo.DeleteSKUByID) echo.HandlerFunc {
+func DeleteSKUByID(
+	deleteSKUByID skurepo.DeleteSKUByID,
+	deleteStockBySKUID stockrepo.DeleteStockBySKUID,
+) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
 
 		ctx := ectx.Request().Context()
@@ -223,7 +232,11 @@ func DeleteSKUByID(deleteSKU skurepo.DeleteSKUByID) echo.HandlerFunc {
 		if err != nil {
 			return ectx.JSON(http.StatusBadRequest, err)
 		}
-		err = deleteSKU(ctx, id)
+		err = deleteSKUByID(ctx, id)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		err = deleteStockBySKUID(ctx, id)
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, err)
 		}
@@ -255,5 +268,52 @@ func UpdateSKUByID(updateSKU skurepo.UpdateSKUFunc) echo.HandlerFunc {
 			return ectx.JSON(http.StatusInternalServerError, err)
 		}
 		return ectx.JSON(http.StatusOK, sku)
+	}
+}
+
+func GetRunningLowStocks(
+	getRunningLowStocks stockrepo.GetRunnigLowStocksFunc,
+	getSKUByID skurepo.GetSKUByIDFunc,
+	getProductByID productrepo.GetProductByIDFunc,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		log.Println("it's confirmed")
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+		}
+		stocks, err := getRunningLowStocks(ctx)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		type respModel struct {
+			stockkeepingunit.StockKeepingUnit
+			Product product.Product `json:"product"`
+			Stock   stock.Stock     `json:"stock"`
+		}
+		resp := []respModel{}
+		for _, st := range stocks {
+			sku, err := getSKUByID(ctx, st.SKUID)
+			log.Println(err, st)
+			if err != nil {
+				continue
+			}
+
+			prod, err := getProductByID(ctx, sku.ProductID)
+
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+			r := respModel{
+				Stock:            st,
+				StockKeepingUnit: *sku,
+				Product:          *prod,
+			}
+
+			resp = append(resp, r)
+		}
+		return ectx.JSON(http.StatusOK, resp)
 	}
 }

@@ -5,20 +5,23 @@ import (
 	"database/sql"
 	"fifentory/stock"
 	stockrepo "fifentory/stock/repository"
+	"log"
 )
 
 const (
-	skuStockFields               = "id,quantity,minimum_quantity"
+	skuStockFields               = "id,quantity,minimum_quantity,sku_id"
 	skuStockTable                = "sku_stock"
 	createStockQuery             = "INSERT " + skuStockTable + " SET quantity = ? , sku_id = ? , minimum_quantity = ? "
 	getSKUStockBySKUIDQuery      = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE sku_id = ?"
-	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? WHERE id = ? , minimum_qty = ? "
+	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? , minimum_quantity = ? WHERE id = ?  "
 	addStockQuantityBySKUIDQuery = "UPDATE " + skuStockTable + " SET quantity = quantity + ? WHERE sku_id = ?"
+	getRunningLowStocksQuery     = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE quantity <= minimum_quantity "
+	deleteStockBySKUIDQuery      = "DELETE FROM " + skuStockTable + " WHERE sku_id = ?"
 )
 
 func CreateStock(conn *sql.DB) stockrepo.CreateSKUStockFunc {
 	return func(ctx context.Context, st stock.Stock) (stock.Stock, error) {
-		res, err := conn.ExecContext(ctx, createStockQuery, st.Quantity, st.SKUID)
+		res, err := conn.ExecContext(ctx, createStockQuery, st.Quantity, st.SKUID, st.MinimumQuantity)
 		if err != nil {
 			return st, err
 		}
@@ -39,7 +42,7 @@ func fetch(conn *sql.DB, ctx context.Context, query string, args ...interface{})
 	stocks := []stock.Stock{}
 	for rows.Next() {
 		st := stock.Stock{}
-		err = rows.Scan(&st.ID, &st.Quantity)
+		err = rows.Scan(&st.ID, &st.Quantity, &st.MinimumQuantity, &st.SKUID)
 		if err != nil {
 			return nil, err
 		}
@@ -67,9 +70,10 @@ func UpdateSKUStockByID(
 	conn *sql.DB,
 ) stockrepo.UpdateSKUStockFunc {
 	return func(ctx context.Context, st stock.Stock) (stock.Stock, error) {
-		_, err := conn.ExecContext(ctx, updateSKUStockByIDQuery, st.Quantity, st.ID)
+		_, err := conn.ExecContext(ctx, updateSKUStockByIDQuery, st.Quantity, st.MinimumQuantity, st.ID)
 		if err != nil {
 			//error logging goes here
+			log.Println(err)
 			return st, err
 		}
 		return st, nil
@@ -101,6 +105,27 @@ func AddStockQuantityBySKUID(conn *sql.DB) stockrepo.AddStockQuantityBySKUIDFunc
 		}
 		if ra > 1 {
 			// had no idea what to do
+		}
+		return nil
+	}
+}
+
+func GetRunningLowStocks(conn *sql.DB) stockrepo.GetRunnigLowStocksFunc {
+	return func(ctx context.Context) ([]stock.Stock, error) {
+		stocks, err := fetch(conn, ctx, getRunningLowStocksQuery)
+		if err != nil {
+			return nil, err
+		}
+		return stocks, nil
+	}
+}
+
+func DeleteStockBySKUID(conn *sql.DB) stockrepo.DeleteStockBySKUID {
+	return func(ctx context.Context, skuID int64) error {
+		_, err := conn.ExecContext(ctx, deleteStockBySKUIDQuery, skuID)
+		if err != nil {
+			log.Println(err)
+			return err
 		}
 		return nil
 	}

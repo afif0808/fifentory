@@ -14,3 +14,7 @@ type UpdateSKUStockFunc func(ctx context.Context, st stock.Stock) (stock.Stock, 
 type SubtractStockQuantityBySKUIDFunc func(ctx context.Context, skuID int64, quantity int) error
 
 type AddStockQuantityBySKUIDFunc func(ctx context.Context, skuID int64, quantity int) error
+
+type GetRunnigLowStocksFunc func(ctx context.Context) ([]stock.Stock, error)
+
+type DeleteStockBySKUID func(ctx context.Context, skuID int64) error
