@@ -6,6 +6,9 @@ import (
 	customerresthandler "fifentory/customer/handler/rest"
 	productresthandler "fifentory/product/handler/rest"
 	skuinresthandler "fifentory/skuin/handler/rest"
+	skuingroupresthandler "fifentory/skuingroup/handler/rest"
+	supplierresthandler "fifentory/supplier/handler/rest"
+
 	skuoutresthandler "fifentory/skuout/handler/rest"
 	skuoutgroupresthandler "fifentory/skuoutgroup/handler/rest"
 	stockresthandler "fifentory/stock/handler/rest"
@@ -45,5 +48,7 @@ func main() {
 	skuoutgroupresthandler.InjectSKUOutGroupRESTHandler(conn, ee)
 	stockresthandler.InjectStockRESTHandler(conn, ee)
 	skuinresthandler.InjectSKUInRESTHandler(conn, ee)
+	skuingroupresthandler.InjectSKUInGroupRESTHandler(conn, ee)
+	supplierresthandler.InjectSupplierRESTHandler(conn, ee)
 	ee.Start(":555")
 }

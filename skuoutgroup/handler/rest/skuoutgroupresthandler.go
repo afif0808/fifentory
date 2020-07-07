@@ -15,12 +15,15 @@ import (
 	"fifentory/skuoutgroup"
 	skuoutgrouprepo "fifentory/skuoutgroup/repository"
 	skuoutgroupsqlrepo "fifentory/skuoutgroup/repository/sql"
+	stockrepo "fifentory/stock/repository"
+	stocksqlrepo "fifentory/stock/repository/sql"
 	"fifentory/stockkeepingunit"
 	skurepo "fifentory/stockkeepingunit/repository"
 	skusqlrepo "fifentory/stockkeepingunit/repository/sql"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo"
 )
@@ -36,6 +39,18 @@ func InjectSKUOutGroupRESTHandler(conn *sql.DB, ee *echo.Echo) {
 
 	ee.GET("/skuoutgroups/:id/skuouts",
 		GetSKUOutsByGroupID(getSKUOutsByGroupID, getProductByID, getSKUByID))
+
+	deleteSKUOutGroupByID := skuoutgroupsqlrepo.DeleteSKUOutGroupByID(conn)
+	deleteSKUOutByGroupID := skuoutsqlrepo.DeleteSKUOutByGroupID(conn)
+	addStockQtyBySKUID := stocksqlrepo.AddStockQuantityBySKUID(conn)
+	ee.DELETE(
+		"/skuoutgroups/:id",
+		DeleteSKUOutGroupByID(
+			deleteSKUOutGroupByID,
+			deleteSKUOutByGroupID,
+			getSKUOutsByGroupID,
+			addStockQtyBySKUID),
+	)
 
 }
 
@@ -123,4 +138,49 @@ func GetSKUOutsByGroupID(
 		}
 		return ectx.JSON(http.StatusOK, completeSKUOuts)
 	}
+}
+
+func DeleteSKUOutGroupByID(
+	deleteSKUOutGroupByID skuoutgrouprepo.DeleteSKUOutGroupByIDFunc,
+	deleteSKUOutByGroupID skuoutrepo.DeleteSKUOutByGroupIDFunc,
+	getSKUOutsByGroupID skuoutrepo.GetSKUOutsByGroupIDFunc,
+	addStockQtyBySKUID stockrepo.AddStockQuantityBySKUIDFunc,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if _, isWithDeadline := ctx.Deadline(); !isWithDeadline {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+		}
+		id, err := strconv.ParseInt(ectx.Param("id"), 10, 64)
+		if err != nil {
+			return ectx.JSON(http.StatusBadRequest, err)
+		}
+
+		skuOuts, err := getSKUOutsByGroupID(ctx, id)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		for _, v := range skuOuts {
+			err := addStockQtyBySKUID(ctx, v.SKUID, v.Quantity)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+		}
+
+		err = deleteSKUOutGroupByID(ctx, id)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		err = deleteSKUOutByGroupID(ctx, id)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+		return ectx.JSON(http.StatusOK, "Deleting Succeded")
+	}
+
 }

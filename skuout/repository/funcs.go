@@ -11,3 +11,5 @@ type GetSKUOUtByIDFunc func(ctx context.Context, id int64) (*skuout.SKUOut, erro
 type GetSKUOutsFunc func(ctx context.Context) ([]skuout.SKUOut, error)
 type GetSKUOutsByGroupIDFunc func(ctx context.Context, groupID int64) ([]skuout.SKUOut, error)
 type UpdateSKUOutFunc func(ctx context.Context, skuOut skuout.SKUOut) error
+type DeleteSKUOutBySKUIDFunc func(ctx context.Context, skuID int64) error
+type DeleteSKUOutByGroupIDFunc func(ctx context.Context, groupID int64) error

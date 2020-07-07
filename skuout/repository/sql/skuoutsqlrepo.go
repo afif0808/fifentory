@@ -6,17 +6,20 @@ import (
 	"errors"
 	"fifentory/skuout"
 	skuoutrepo "fifentory/skuout/repository"
+	"log"
 )
 
 const (
-	skutOutTable             = "sku_out"
-	skuOutFields             = "id,quantity,date,sku_id,sku_out_group_id"
-	createSKUOutQuery        = "INSERT " + skutOutTable + " SET quantity = ? , sku_id = ? ,date = ? , sku_out_group_id = ?"
-	deleteSKUOutByIDQuery    = "DELETE FROM " + skutOutTable + " WHERE id = ?"
-	getSKUOUtByIDQuery       = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE id = ? "
-	getSKUOutsQuery          = "SELECT " + skuOutFields + " FROM " + skutOutTable
-	getSKUOutsByGroupIdQuery = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE sku_out_group_id = ?"
-	updateSKUOutByIDQuery    = "UPDATE " + skutOutTable + " SET quantity = ? , date = ? , sku_id = ?, sku_out_group_id = ? " + " WHERE id = ? "
+	skutOutTable               = "sku_out"
+	skuOutFields               = "id,quantity,date,sku_id,sku_out_group_id"
+	createSKUOutQuery          = "INSERT " + skutOutTable + " SET quantity = ? , sku_id = ? ,date = ? , sku_out_group_id = ?"
+	deleteSKUOutByIDQuery      = "DELETE FROM " + skutOutTable + " WHERE id = ?"
+	getSKUOUtByIDQuery         = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE id = ? "
+	getSKUOutsQuery            = "SELECT " + skuOutFields + " FROM " + skutOutTable
+	getSKUOutsByGroupIdQuery   = "SELECT " + skuOutFields + " FROM " + skutOutTable + " WHERE sku_out_group_id = ?"
+	updateSKUOutByIDQuery      = "UPDATE " + skutOutTable + " SET quantity = ? , date = ? , sku_id = ?, sku_out_group_id = ? " + " WHERE id = ? "
+	deleteSKUOutBySKUIDQuery   = "DELETE FROM " + skutOutTable + " WHERE sku_id = ? "
+	deleteSKUOutByGroupIDQuery = "DELETE FROM " + skutOutTable + " WHERE sku_out_group_id = ?"
 )
 
 func CreateSKUOut(conn *sql.DB) skuoutrepo.CreateSKUOutFunc {
@@ -115,6 +118,27 @@ func UpdateSKUOutByID(conn *sql.DB) skuoutrepo.UpdateSKUOutFunc {
 		}
 		if ra != 1 {
 			return errors.New("Error : something's wrong :D ")
+		}
+		return nil
+	}
+}
+func DeleteSKUOutBySKUID(conn *sql.DB) skuoutrepo.DeleteSKUOutBySKUIDFunc {
+	return func(ctx context.Context, skuID int64) error {
+		_, err := conn.ExecContext(ctx, deleteSKUOutBySKUIDQuery, skuID)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return nil
+	}
+}
+
+func DeleteSKUOutByGroupID(conn *sql.DB) skuoutrepo.DeleteSKUOutByGroupIDFunc {
+	return func(ctx context.Context, groupID int64) error {
+		_, err := conn.ExecContext(ctx, deleteSKUOutByGroupIDQuery, groupID)
+		if err != nil {
+			log.Println(err)
+			return err
 		}
 		return nil
 	}

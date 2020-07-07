@@ -7,6 +7,8 @@ import (
 	"fifentory/product"
 	productrepo "fifentory/product/repository"
 	productsqlrepo "fifentory/product/repository/sql"
+	skuoutrepo "fifentory/skuout/repository"
+	skuoutsqlrepo "fifentory/skuout/repository/sql"
 	"fifentory/stock"
 	stockrepo "fifentory/stock/repository"
 	stocksqlrepo "fifentory/stock/repository/sql"
@@ -41,7 +43,8 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
 	deleteStockBySKUID := stocksqlrepo.DeleteStockBySKUID(conn)
-	ee.DELETE("/skus/:id", DeleteSKUByID(deleteSKUByID, deleteStockBySKUID))
+	deleteSKUOutBySKUID := skuoutsqlrepo.DeleteSKUOutBySKUID(conn)
+	ee.DELETE("/skus/:id", DeleteSKUByID(deleteSKUByID, deleteStockBySKUID, deleteSKUOutBySKUID))
 
 	updateSKUByID := skusqlrepo.UpdateSKUByID(conn)
 
@@ -169,9 +172,13 @@ func GetSKUs(
 	return func(ectx echo.Context) error {
 		ctx := ectx.Request().Context()
 		if ctx == nil {
+			ctx = context.Background()
+		}
+		if _, isWithDeadline := ctx.Deadline(); !isWithDeadline {
 			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(context.Background(), time.Second*5)
+			ctx, cancel = context.WithTimeout(ctx, time.Second*5)
 			defer cancel()
+
 		}
 		var opts *options.Options
 		name := ectx.Request().URL.Query().Get("name")
@@ -221,9 +228,9 @@ func GetSKUs(
 func DeleteSKUByID(
 	deleteSKUByID skurepo.DeleteSKUByID,
 	deleteStockBySKUID stockrepo.DeleteStockBySKUID,
+	deleteSKUOutBySKUID skuoutrepo.DeleteSKUOutBySKUIDFunc,
 ) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
-
 		ctx := ectx.Request().Context()
 		if ctx == nil {
 			ctx = context.Background()
@@ -240,6 +247,11 @@ func DeleteSKUByID(
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, err)
 		}
+		err = deleteSKUOutBySKUID(ctx, id)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, err)
+		}
+
 		return ectx.JSON(http.StatusOK, "Succeded deleting sku")
 	}
 }

@@ -3,6 +3,7 @@ package stocksqlrepo
 import (
 	"context"
 	"database/sql"
+	"fifentory/options"
 	"fifentory/stock"
 	stockrepo "fifentory/stock/repository"
 	"log"
@@ -17,6 +18,8 @@ const (
 	addStockQuantityBySKUIDQuery = "UPDATE " + skuStockTable + " SET quantity = quantity + ? WHERE sku_id = ?"
 	getRunningLowStocksQuery     = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE quantity <= minimum_quantity "
 	deleteStockBySKUIDQuery      = "DELETE FROM " + skuStockTable + " WHERE sku_id = ?"
+	substractStockQuantityQuery  = "UPDATE " + skuStockTable + " SET quantity = quantity - ?"
+	addStockQuantityQuery        = "UPDATE " + skuStockTable + " SET quantity = quantity + ?"
 )
 
 func CreateStock(conn *sql.DB) stockrepo.CreateSKUStockFunc {
@@ -128,5 +131,31 @@ func DeleteStockBySKUID(conn *sql.DB) stockrepo.DeleteStockBySKUID {
 			return err
 		}
 		return nil
+	}
+}
+
+func SubstractStockQuantity(conn *sql.DB) stockrepo.SubtractStockQuantityFunc {
+	return func(ctx context.Context, fts []options.Filter, quantity int) error {
+		filtersQuery, filtersArgs := options.ParseFiltersToSQLQuery(fts)
+		filtersArgs = append([]interface{}{quantity}, filtersArgs...)
+		query := substractStockQuantityQuery + " " + filtersQuery
+		_, err := conn.ExecContext(ctx, query, filtersArgs...)
+		if err != nil {
+			log.Println(err)
+		}
+		return err
+	}
+}
+
+func AddStockQuantity(conn *sql.DB) stockrepo.AddStockQuantityFunc {
+	return func(ctx context.Context, fts []options.Filter, quantity int) error {
+		filtersQuery, filtersArgs := options.ParseFiltersToSQLQuery(fts)
+		filtersArgs = append([]interface{}{quantity}, filtersArgs...)
+		query := addStockQuantityQuery + " " + filtersQuery
+		_, err := conn.ExecContext(ctx, query, filtersArgs...)
+		if err != nil {
+			log.Println(err)
+		}
+		return err
 	}
 }

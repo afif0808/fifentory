@@ -43,3 +43,24 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 	}
 	return
 }
+
+func ParseFiltersToSQLQuery(fts []Filter) (query string, args []interface{}) {
+	if fts != nil && len(fts) != 0 {
+		query = " WHERE "
+	}
+	for range fts {
+		for _, ft := range fts {
+			if ft.Operator == "LIKE" {
+				for _, v := range strings.Split(fmt.Sprint(ft.Value), " ") {
+					query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
+					args = append(args, fmt.Sprint("%", v, "%"))
+				}
+			} else {
+				query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
+				args = append(args, ft.Value)
+			}
+		}
+		query = query[:len(query)-4]
+	}
+	return
+}

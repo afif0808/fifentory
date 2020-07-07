@@ -51,7 +51,10 @@ func fetch(conn *sql.DB, ctx context.Context, query string, args ...interface{})
 	skus := []stockkeepingunit.StockKeepingUnit{}
 	for rows.Next() {
 		sku := stockkeepingunit.StockKeepingUnit{}
-		err := rows.Scan(&sku.ID, &sku.Code, &sku.ProductID, &sku.CreatedAt)
+		// err := rows.Scan(&sku.ID, &sku.Code, &sku.ProductID, &sku.CreatedAt)
+		s := []interface{}{&sku.ID, &sku.Code, &sku.ProductID, &sku.CreatedAt}
+		err := rows.Scan(s...)
+
 		if err != nil {
 			return nil, err
 		}

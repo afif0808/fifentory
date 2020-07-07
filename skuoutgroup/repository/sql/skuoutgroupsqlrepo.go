@@ -5,13 +5,15 @@ import (
 	"database/sql"
 	"fifentory/skuoutgroup"
 	skuoutgrouprepo "fifentory/skuoutgroup/repository"
+	"log"
 )
 
 const (
-	skuOutGroupTable       = "sku_out_group"
-	skuOutGroupFields      = "id,date,customer_id"
-	createSKUOutGroupQuery = "INSERT " + skuOutGroupTable + " SET date = ? , customer_id = ?"
-	getSKUOutGroupsQuery   = "SELECT " + skuOutGroupFields + " FROM " + skuOutGroupTable
+	skuOutGroupTable           = "sku_out_group"
+	skuOutGroupFields          = "id,date,customer_id"
+	createSKUOutGroupQuery     = "INSERT " + skuOutGroupTable + " SET date = ? , customer_id = ?"
+	getSKUOutGroupsQuery       = "SELECT " + skuOutGroupFields + " FROM " + skuOutGroupTable
+	deleteSKUOutGroupByIDQuery = "DELETE FROM " + skuOutGroupTable + " WHERE id = ?"
 )
 
 func CreateSKUOutGroup(conn *sql.DB) skuoutgrouprepo.CreateSKUOutGroupFunc {
@@ -55,5 +57,16 @@ func GetSKUOutGroups(conn *sql.DB) skuoutgrouprepo.GetSKUOutGroupsFunc {
 			return nil, err
 		}
 		return outgroups, nil
+	}
+}
+
+func DeleteSKUOutGroupByID(conn *sql.DB) skuoutgrouprepo.DeleteSKUOutGroupByIDFunc {
+	return func(ctx context.Context, id int64) error {
+		_, err := conn.ExecContext(ctx, deleteSKUOutGroupByIDQuery, id)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return nil
 	}
 }

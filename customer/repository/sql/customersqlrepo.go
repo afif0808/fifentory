@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fifentory/customer"
 	customerrepo "fifentory/customer/repository"
+	"fifentory/models"
 	"log"
 )
 
@@ -58,4 +59,11 @@ func GetCustomer(conn *sql.DB) customerrepo.GetCustomerByIDFunc {
 		}
 		return &customers[0], nil
 	}
+}
+
+func CustomerSQLJoin(sf models.SQLFetcher, c *customer.Customer, foreignKey string) {
+	dest := []interface{}{&c.ID, &c.Name}
+	sf.AddScanDest(dest)
+	sf.AddJoins(" INNER JOIN customer ON customer.id = " + foreignKey)
+	sf.AddFields(",customer.id , customer.name")
 }
