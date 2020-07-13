@@ -14,6 +14,7 @@ const (
 	customerFields       = "id,name"
 	getCustomersQuery    = "SELECT " + customerFields + " FROM " + customerTable
 	getCustomerByIDQuery = "SELECT " + customerFields + " FROM " + customerTable + " WHERE id = ?"
+	createCustomerQuery  = "INSERT " + customerTable + " SET name = ?"
 )
 
 func fetchCustomers(conn *sql.DB, ctx context.Context, query string, args ...interface{}) ([]customer.Customer, error) {
@@ -66,4 +67,21 @@ func CustomerSQLJoin(sf models.SQLFetcher, c *customer.Customer, foreignKey stri
 	sf.AddScanDest(dest)
 	sf.AddJoins(" INNER JOIN customer ON customer.id = " + foreignKey)
 	sf.AddFields(",customer.id , customer.name")
+}
+
+func CreateCustomer(conn *sql.DB) customerrepo.CreateCustomerFunc {
+	return func(ctx context.Context, cus customer.Customer) (customer.Customer, error) {
+		res, err := conn.ExecContext(ctx, createCustomerQuery, cus.Name)
+		if err != nil {
+			log.Println(err)
+			return cus, err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			log.Println(err)
+			return cus, err
+		}
+		cus.ID = id
+		return cus, nil
+	}
 }

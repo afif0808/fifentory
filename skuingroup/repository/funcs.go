@@ -8,3 +8,4 @@ import (
 
 type CreateSKUInGroupFunc func(ctx context.Context, skuingroup skuingroup.SKUInGroup) (skuingroup.SKUInGroup, error)
 type GetSKUInGroupsFunc func(ctx context.Context, opts *options.Options) ([]skuingroup.SKUInGroup, error)
+type DeleteSKUInGroupsFunc func(ctx context.Context, fts []options.Filter) error

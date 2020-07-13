@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fifentory/customer"
 	customerrepo "fifentory/customer/repository"
 	customersqlrepo "fifentory/customer/repository/sql"
+	"fifentory/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -16,7 +19,8 @@ import (
 func InjectCustomerRESTHandler(conn *sql.DB, ee *echo.Echo) {
 	getCustomers := customersqlrepo.GetCustomers(conn)
 	ee.GET("/customers", GetCustomers(getCustomers))
-
+	createCustomer := customersqlrepo.CreateCustomer(conn)
+	ee.POST("/customers", CreateCustomer(createCustomer))
 	ee.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -51,5 +55,33 @@ func GetCustomerByID(getCustomer customerrepo.GetCustomerByIDFunc) echo.HandlerF
 			return ectx.JSON(http.StatusInternalServerError, err)
 		}
 		return ectx.JSON(http.StatusOK, cus)
+	}
+}
+
+func CreateCustomer(
+	createCustomer customerrepo.CreateCustomerFunc,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if _, isWithDeadline := ctx.Deadline(); isWithDeadline == false {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+		}
+		var post struct {
+			Customer *customer.Customer `json:"customer"`
+		}
+		err := ectx.Bind(&post)
+		if err != nil {
+			return ectx.JSON(http.StatusBadRequest, models.RESTErrorResponse{Message: err.Error()})
+		}
+		*post.Customer, err = createCustomer(ctx, *post.Customer)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, models.RESTErrorResponse{Message: err.Error()})
+		}
+		return ectx.JSON(http.StatusCreated, post.Customer)
 	}
 }

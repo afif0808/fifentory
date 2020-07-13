@@ -9,11 +9,19 @@ import (
 	"log"
 )
 
-func SupplierSQLJoin(sf models.SQLFetcher, s *supplier.Supplier, foreignKey string) {
+// func SupplierSQLJoin(sf models.SQLFetcher, s *supplier.Supplier, foreignKey string) {
+// 	dest := []interface{}{&s.ID, &s.Name}
+// 	sf.AddScanDest(dest)
+// 	sf.AddJoins(" INNER JOIN supplier ON supplier.id = " + foreignKey)
+// 	sf.AddFields(",supplier.id , supplier.name")
+// }
+func SupplierSQLJoin(sf models.SQLFetcher, foreignKey string) *supplier.Supplier {
+	s := &supplier.Supplier{}
 	dest := []interface{}{&s.ID, &s.Name}
 	sf.AddScanDest(dest)
 	sf.AddJoins(" INNER JOIN supplier ON supplier.id = " + foreignKey)
 	sf.AddFields(",supplier.id , supplier.name")
+	return s
 }
 
 type SupplierSQLFetcher struct {
@@ -54,3 +62,4 @@ func NewSupplierSQLFetcher(conn *sql.DB) SupplierSQLFetcher {
 	ssf.scanDest = []interface{}{&ssf.Receiver.ID, &ssf.Receiver.Name}
 	return ssf
 }
+

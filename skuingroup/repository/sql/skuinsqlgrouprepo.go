@@ -3,14 +3,16 @@ package skuingroupsqlrepo
 import (
 	"context"
 	"database/sql"
+	"fifentory/options"
 	"fifentory/skuingroup"
 	skuingrouprepo "fifentory/skuingroup/repository"
 	"log"
 )
 
 const (
-	skuInGroupTable       = "sku_in_group"
-	createSKUInGroupQuery = "INSERT " + skuInGroupTable + " SET supplier_id = ? , date = ? "
+	skuInGroupTable        = "sku_in_group"
+	createSKUInGroupQuery  = "INSERT " + skuInGroupTable + " SET supplier_id = ? , date = ? "
+	deleteSKUInGroupsQuery = "DELETE FROM " + skuInGroupTable
 )
 
 func CreateSKUInGroup(conn *sql.DB) skuingrouprepo.CreateSKUInGroupFunc {
@@ -27,5 +29,16 @@ func CreateSKUInGroup(conn *sql.DB) skuingrouprepo.CreateSKUInGroupFunc {
 		}
 		ingroup.ID = id
 		return ingroup, nil
+	}
+}
+func DeleteSKUInGroups(conn *sql.DB) skuingrouprepo.DeleteSKUInGroupsFunc {
+	return func(ctx context.Context, fts []options.Filter) error {
+		filtersQuery, filtersArgs := options.ParseFiltersToSQLQuery(fts)
+		query := deleteSKUInGroupsQuery + " " + filtersQuery
+		_, err := conn.ExecContext(ctx, query, filtersArgs...)
+		if err != nil {
+			log.Println(err)
+		}
+		return err
 	}
 }
