@@ -32,8 +32,33 @@ func (skuig *SKUInGetter) Get(ctx context.Context, opts *options.Options) ([]sku
 		if err != nil {
 			return nil, err
 		}
+		skuIn := skuin.SKUIn{
+			ID:       skuig.SKUIn.ID,
+			Date:     skuig.SKUIn.Date,
+			Quantity: skuig.SKUIn.Quantity,
+		}
+		if skuig.SKU != nil {
+			skuIn.SKU = &stockkeepingunit.SKU{
+				ID:        skuig.SKU.ID,
+				Code:      skuig.SKU.Code,
+				CreatedAt: skuig.SKU.CreatedAt,
+			}
+		}
+		if skuig.SKU.Product != nil {
+			skuIn.SKU.Product = &product.Product{
+				ID:        skuig.SKU.Product.ID,
+				Name:      skuig.SKU.Product.Name,
+				CreatedAt: skuig.SKU.Product.CreatedAt,
+			}
+		}
+		if skuig.Group != nil {
+			skuIn.Group = &skuingroup.SKUInGroup{
+				ID:   skuig.Group.ID,
+				Date: skuig.Group.Date,
+			}
+		}
 
-		skuIns = append(skuIns, *skuig.SKUIn)
+		skuIns = append(skuIns, skuIn)
 	}
 	return skuIns, nil
 }
@@ -41,21 +66,21 @@ func (skuig *SKUInGetter) Get(ctx context.Context, opts *options.Options) ([]sku
 func (skuig *SKUInGetter) WithSKU() {
 	skuig.fields += ",sku.id,sku.code,sku.created_at"
 	skuig.joins += " INNER JOIN sku ON sku.id = sku_in.sku_id"
-	skuig.SKU = stockkeepingunit.SKU{}
+	skuig.SKU = &stockkeepingunit.SKU{}
 	sd := []interface{}{&skuig.SKUIn.SKU.ID, &skuig.SKU.Code, &skuig.SKU.CreatedAt}
 	skuig.scanDestination = append(skuig.scanDestination, sd...)
 }
 func (skuig *SKUInGetter) WithProduct() {
 	skuig.fields += ",product.id , product.name , product.created_at"
 	skuig.joins += " INNER JOIN product ON product.id = sku.product_id"
-	skuig.SKUIn.SKU.Product = product.Product{}
+	skuig.SKU.Product = &product.Product{}
 	sd := []interface{}{&skuig.SKUIn.SKU.Product.ID, &skuig.SKUIn.SKU.Product.Name, &skuig.SKUIn.SKU.Product.CreatedAt}
 	skuig.scanDestination = append(skuig.scanDestination, sd...)
 }
 func (skuig *SKUInGetter) WithGroup() {
 	skuig.fields += ",sku_in.sku_in_group_id ,sku_in_group.id , sku_in_group.date"
 	skuig.joins += " INNER JOIN sku_in_group ON sku_in.sku_in_group_id = sku_in_group.id"
-	skuig.Group = skuingroup.SKUInGroup{}
+	skuig.Group = &skuingroup.SKUInGroup{}
 	sd := []interface{}{&skuig.SKUIn.ID, &skuig.SKUIn.Group.ID, &skuig.SKUIn.Group.Date}
 	skuig.scanDestination = append(skuig.scanDestination, sd...)
 }

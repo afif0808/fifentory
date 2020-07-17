@@ -18,6 +18,7 @@ func CreateSupplier(conn *sql.DB) supplierrepo.CreateSupplierFunc {
 		if err != nil {
 			return sup, err
 		}
+
 		id, err := res.LastInsertId()
 		if err != nil {
 			return sup, err

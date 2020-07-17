@@ -9,6 +9,9 @@ import (
 	productsqlrepo "fifentory/product/repository/sql"
 	skuoutrepo "fifentory/skuout/repository"
 	skuoutsqlrepo "fifentory/skuout/repository/sql"
+	"fifentory/skuvariant"
+	skuvariantrepo "fifentory/skuvariant/repository"
+	skuvariantsqlrepo "fifentory/skuvariant/repository/sql"
 	"fifentory/stock"
 	stockrepo "fifentory/stock/repository"
 	stocksqlrepo "fifentory/stock/repository/sql"
@@ -32,7 +35,8 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	createProduct := productsqlrepo.CreateProduct(conn)
 	createStock := stocksqlrepo.CreateStock(conn)
 	createSKU := skusqlrepo.CreateSKU(conn)
-	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct))
+	createSKUVariant := skuvariantsqlrepo.CreateSKUVariant(conn)
+	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct, createSKUVariant))
 	// getCategoryById := categorysqlrepo.GetCategoryByID(conn)
 	// getProductCategories := categorysqlrepo.GetProductCategories(conn, getCategoryById)
 	getProductByID := productsqlrepo.GetProductByID(conn)
@@ -61,9 +65,10 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 }
 
 type createSKUPost struct {
-	Product *product.Product                   `json:"product" validate:"required"`
-	Stock   *stock.Stock                       `json:"stock" validate:"required"`
-	SKU     *stockkeepingunit.StockKeepingUnit `json:"sku" validate:"required"`
+	Product  *product.Product                   `json:"product" validate:"required"`
+	Stock    *stock.Stock                       `json:"stock" validate:"required"`
+	SKU      *stockkeepingunit.StockKeepingUnit `json:"sku" validate:"required"`
+	Variants []skuvariant.SKUVariant            `json:"variants"`
 }
 
 func validateCreateSKUPost(cskup createSKUPost) error {
@@ -74,6 +79,7 @@ func CreateSKUs(
 	createSKU skurepo.CreateSKUFunc,
 	createStock stockrepo.CreateSKUStockFunc,
 	createProduct productrepo.CreateProductFunc,
+	createSKUVariant skuvariantrepo.CreateSKUVariantFunc,
 ) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
 		ctx := ectx.Request().Context()
@@ -108,8 +114,13 @@ func CreateSKUs(
 			if err != nil {
 				return ectx.JSON(http.StatusInternalServerError, err)
 			}
+
 			post.Stock.SKUID = post.SKU.ID
 			*post.Stock, err = createStock(ctx, *post.Stock)
+			for _, v := range post.Variants {
+				v.SKUID = post.SKU.ID
+				createSKUVariant(ctx, v)
+			}
 		}
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, err)

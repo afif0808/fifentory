@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fifentory/options"
+	"fifentory/product"
 	"fifentory/stockkeepingunit"
 	skurepo "fifentory/stockkeepingunit/repository"
 )
@@ -37,8 +38,14 @@ func (skuf *SKUSQLFetcher) Get() skurepo.GetSKUsFunc {
 				CreatedAt: skuf.Receiver.CreatedAt,
 			}
 			if skuf.Receiver.Product != nil {
-
+				pd := product.Product{
+					ID:        skuf.Receiver.Product.ID,
+					Name:      skuf.Receiver.Product.Name,
+					CreatedAt: skuf.Receiver.CreatedAt,
+				}
+				sku.Product = &pd
 			}
+
 			skus = append(skus, sku)
 		}
 		return skus, nil

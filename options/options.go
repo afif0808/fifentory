@@ -26,7 +26,7 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 	if opts == nil {
 		return "", nil
 	}
-	if opts.Filters != nil || len(opts.Filters) > 0 {
+	if opts.Filters != nil && len(opts.Filters) > 0 {
 		query = " WHERE "
 		for _, ft := range opts.Filters {
 			if ft.Operator == "LIKE" {

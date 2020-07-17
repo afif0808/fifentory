@@ -14,7 +14,6 @@ import (
 	skuingroupsqlrepo "fifentory/skuingroup/repository/sql"
 	stockrepo "fifentory/stock/repository"
 	stocksqlrepo "fifentory/stock/repository/sql"
-	"fifentory/stockkeepingunit"
 	"log"
 	"net/http"
 	"strconv"
@@ -142,7 +141,7 @@ func DeleteSKUIn(
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, models.RESTErrorResponse{Message: err.Error()})
 		}
-		if len(skuIns) <= 0 || skuIns[0].SKU == (stockkeepingunit.SKU{}) {
+		if len(skuIns) <= 0 || skuIns[0].SKU == nil {
 			return ectx.JSON(http.StatusInternalServerError, errors.New("cannot delete skuin , it could be the skuin not found or internal error"))
 
 		}
@@ -205,7 +204,7 @@ func UpdateSKUIn(
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, models.RESTErrorResponse{Message: err.Error()})
 		}
-		if len(skuIns) <= 0 || skuIns[0].SKU == (stockkeepingunit.SKU{}) {
+		if len(skuIns) <= 0 || skuIns[0].SKU == nil {
 			return ectx.JSON(http.StatusInternalServerError, errors.New("cannot update skuin , it could be the skuin not found or internal error"))
 		}
 

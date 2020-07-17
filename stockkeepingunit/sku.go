@@ -21,9 +21,9 @@ type CompleteSKU struct {
 }
 
 type SKU struct {
-	ID        int64           `json:"id"`
-	Code      string          `json:"code"`
-	CreatedAt time.Time       `json:"created_at"`
-	Product   product.Product `json:"product,omitempty" `
-	Stock     stock.Stock     `json:"stock,omitempty" `
+	ID        int64            `json:"id"`
+	Code      string           `json:"code"`
+	CreatedAt time.Time        `json:"created_at"`
+	Product   *product.Product `json:"product,omitempty" `
+	Stock     *stock.Stock     `json:"stock,omitempty" `
 }
