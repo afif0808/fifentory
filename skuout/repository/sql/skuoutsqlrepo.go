@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fifentory/options"
 	"fifentory/skuout"
 	skuoutrepo "fifentory/skuout/repository"
 	"log"
@@ -88,8 +89,9 @@ func GetSKUOUtByID(conn *sql.DB) skuoutrepo.GetSKUOUtByIDFunc {
 	}
 }
 func GetSKUOuts(conn *sql.DB) skuoutrepo.GetSKUOutsFunc {
-	return func(ctx context.Context) ([]skuout.SKUOut, error) {
-		skuOuts, err := fetchSKUOuts(conn, ctx, getSKUOutsQuery)
+	return func(ctx context.Context, opts *options.Options) ([]skuout.SKUOut, error) {
+		optionsQuery, optionsArgs := options.ParseOptionsToSQLQuery(opts)
+		skuOuts, err := fetchSKUOuts(conn, ctx, getSKUOutsQuery+" "+optionsQuery, optionsArgs...)
 		if err != nil {
 			// error logging goes here
 			return nil, err

@@ -3,12 +3,14 @@ package skuresthandler
 import (
 	"context"
 	"database/sql"
+	"fifentory/models"
 	"fifentory/options"
 	"fifentory/product"
 	productrepo "fifentory/product/repository"
 	productsqlrepo "fifentory/product/repository/sql"
 	skuoutrepo "fifentory/skuout/repository"
 	skuoutsqlrepo "fifentory/skuout/repository/sql"
+	skupricesqlrepo "fifentory/skuprice/repository/sql"
 	"fifentory/skuvariant"
 	skuvariantrepo "fifentory/skuvariant/repository"
 	skuvariantsqlrepo "fifentory/skuvariant/repository/sql"
@@ -44,6 +46,20 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	getSKUs := skusqlrepo.GetSKUs(conn)
 	getSKUStockBySKUID := stocksqlrepo.GetSKUStockBySKUID(conn)
 	ee.GET("/skus", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
+
+	skuSQLFetcher := skusqlrepo.NewSKUSQLFetcher(conn)
+
+	prod := productsqlrepo.ProductSQLJoin(&skuSQLFetcher, "sku.product_id")
+	skuSQLFetcher.Receiver.Product = prod
+
+	st := stocksqlrepo.SKUStockSQLJoin(&skuSQLFetcher)
+	skuSQLFetcher.Receiver.Stock = st
+
+	sp := skupricesqlrepo.SKUPriceSQLJoin(&skuSQLFetcher)
+
+	skuSQLFetcher.Receiver.Price = sp
+
+	ee.GET("/skus3", GetSKUs3(skuSQLFetcher.Fetch))
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
 	deleteStockBySKUID := stocksqlrepo.DeleteStockBySKUID(conn)
@@ -175,6 +191,35 @@ func GetSKUs2(
 	}
 }
 
+func GetSKUs3(
+	getSKUs skurepo.GetSKUsFunc,
+) echo.HandlerFunc {
+	return func(ectx echo.Context) error {
+		ctx := ectx.Request().Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		if _, isWithDeadline := ctx.Deadline(); !isWithDeadline {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Second*5)
+			defer cancel()
+		}
+		urlQuery := ectx.Request().URL.Query()
+		keyword := urlQuery.Get("q")
+		productNameFilter := options.Filter{
+			By:       "product.name",
+			Operator: "LIKE",
+			Value:    keyword,
+		}
+		opts := options.Options{Filters: []options.Filter{productNameFilter}}
+		skus, err := getSKUs(ctx, &opts)
+		if err != nil {
+			return ectx.JSON(http.StatusInternalServerError, models.RESTErrorResponse{Message: err.Error()})
+		}
+		return ectx.JSON(http.StatusOK, skus)
+	}
+}
+
 func GetSKUs(
 	getProducts productrepo.GetProductsFunc,
 	getSKUs skurepo.GetSKUs,
@@ -189,7 +234,6 @@ func GetSKUs(
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(ctx, time.Second*5)
 			defer cancel()
-
 		}
 		var opts *options.Options
 		name := ectx.Request().URL.Query().Get("name")

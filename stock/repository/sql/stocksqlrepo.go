@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	skuStockFields               = "id,quantity,minimum_quantity,sku_id"
+	skuStockFields               = "quantity,minimum_quantity,sku_id"
 	skuStockTable                = "sku_stock"
 	createStockQuery             = "INSERT " + skuStockTable + " SET quantity = ? , sku_id = ? , minimum_quantity = ? "
 	getSKUStockBySKUIDQuery      = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE sku_id = ?"
-	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? , minimum_quantity = ? WHERE id = ?  "
+	updateSKUStockByIDQuery      = "UPDATE " + skuStockTable + " SET quantity = ? , minimum_quantity = ? WHERE sku_id = ?  "
 	addStockQuantityBySKUIDQuery = "UPDATE " + skuStockTable + " SET quantity = quantity + ? WHERE sku_id = ?"
 	getRunningLowStocksQuery     = "SELECT " + skuStockFields + " FROM " + skuStockTable + " WHERE quantity <= minimum_quantity "
 	deleteStockBySKUIDQuery      = "DELETE FROM " + skuStockTable + " WHERE sku_id = ?"
@@ -24,15 +24,10 @@ const (
 
 func CreateStock(conn *sql.DB) stockrepo.CreateSKUStockFunc {
 	return func(ctx context.Context, st stock.Stock) (stock.Stock, error) {
-		res, err := conn.ExecContext(ctx, createStockQuery, st.Quantity, st.SKUID, st.MinimumQuantity)
+		_, err := conn.ExecContext(ctx, createStockQuery, st.Quantity, st.SKUID, st.MinimumQuantity)
 		if err != nil {
 			return st, err
 		}
-		id, err := res.LastInsertId()
-		if err != nil {
-			return st, err
-		}
-		st.ID = id
 		return st, nil
 	}
 }
@@ -45,7 +40,7 @@ func fetch(conn *sql.DB, ctx context.Context, query string, args ...interface{})
 	stocks := []stock.Stock{}
 	for rows.Next() {
 		st := stock.Stock{}
-		err = rows.Scan(&st.ID, &st.Quantity, &st.MinimumQuantity, &st.SKUID)
+		err = rows.Scan(&st.Quantity, &st.MinimumQuantity, &st.SKUID)
 		if err != nil {
 			return nil, err
 		}
@@ -69,11 +64,11 @@ func GetSKUStockBySKUID(
 		return &skus[0], nil
 	}
 }
-func UpdateSKUStockByID(
+func UpdateSKUStockBySKUID(
 	conn *sql.DB,
 ) stockrepo.UpdateSKUStockFunc {
 	return func(ctx context.Context, st stock.Stock) (stock.Stock, error) {
-		_, err := conn.ExecContext(ctx, updateSKUStockByIDQuery, st.Quantity, st.MinimumQuantity, st.ID)
+		_, err := conn.ExecContext(ctx, updateSKUStockByIDQuery, st.Quantity, st.MinimumQuantity, st.SKUID)
 		if err != nil {
 			//error logging goes here
 			log.Println(err)

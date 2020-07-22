@@ -43,14 +43,15 @@ func (skuig *SKUInGetter) Get(ctx context.Context, opts *options.Options) ([]sku
 				Code:      skuig.SKU.Code,
 				CreatedAt: skuig.SKU.CreatedAt,
 			}
-		}
-		if skuig.SKU.Product != nil {
-			skuIn.SKU.Product = &product.Product{
-				ID:        skuig.SKU.Product.ID,
-				Name:      skuig.SKU.Product.Name,
-				CreatedAt: skuig.SKU.Product.CreatedAt,
+			if skuig.SKU.Product != nil {
+				skuIn.SKU.Product = &product.Product{
+					ID:        skuig.SKU.Product.ID,
+					Name:      skuig.SKU.Product.Name,
+					CreatedAt: skuig.SKU.Product.CreatedAt,
+				}
 			}
 		}
+
 		if skuig.Group != nil {
 			skuIn.Group = &skuingroup.SKUInGroup{
 				ID:   skuig.Group.ID,

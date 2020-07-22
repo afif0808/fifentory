@@ -152,7 +152,6 @@ func UpdateSKUOutByID(
 		if ctx == nil {
 			ctx = context.Background()
 		}
-
 		var post struct {
 			SKUOut *skuout.SKUOut `json:"sku_out"`
 		}

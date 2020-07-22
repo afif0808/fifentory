@@ -29,14 +29,16 @@ func ParseOptionsToSQLQuery(opts *Options) (query string, args []interface{}) {
 	if opts.Filters != nil && len(opts.Filters) > 0 {
 		query = " WHERE "
 		for _, ft := range opts.Filters {
-			if ft.Operator == "LIKE" {
-				for _, v := range strings.Split(fmt.Sprint(ft.Value), " ") {
+			if ft != (Filter{}) {
+				if ft.Operator == "LIKE" {
+					for _, v := range strings.Split(fmt.Sprint(ft.Value), " ") {
+						query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
+						args = append(args, fmt.Sprint("%", v, "%"))
+					}
+				} else {
 					query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
-					args = append(args, fmt.Sprint("%", v, "%"))
+					args = append(args, ft.Value)
 				}
-			} else {
-				query += fmt.Sprint(ft.By, " ", ft.Operator, " ? AND ")
-				args = append(args, ft.Value)
 			}
 		}
 		query = query[:len(query)-4]
