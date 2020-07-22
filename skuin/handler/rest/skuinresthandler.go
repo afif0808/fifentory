@@ -76,6 +76,11 @@ func CreateSKUIn(
 			if post.SKUIns[i].Date == (time.Time{}) {
 				post.SKUIns[i].Date = time.Now()
 			}
+
+			if post.SKUIns[i].Group == nil {
+				post.SKUIns[i].Group = &skuingroup.SKUInGroup{}
+			}
+
 			post.SKUIns[i].Group.ID = post.Group.ID
 			post.SKUIns[i], err = createSKUIn(ctx, post.SKUIns[i])
 

@@ -17,6 +17,8 @@ import (
 	skuspreadsheethandler "fifentory/stockkeepingunit/handler/spreadsheet"
 	variantresthandler "fifentory/variant/handler/rest"
 	variantgroupresthandler "fifentory/variantgroup/handler/rest"
+
+	skupriceresthandler "fifentory/skuprice/handler/rest"
 	"fmt"
 	"log"
 	"os"
@@ -57,6 +59,7 @@ func main() {
 	variantresthandler.InjectVariantRESTHandler(conn, ee)
 	variantgroupresthandler.InjectVariantGroupRESTHandler(conn, ee)
 	skuspreadsheethandler.InjectSKUSpreadSheetHandler(conn, ee)
+	skupriceresthandler.InjectSKUPriceRESTHandler(conn,ee)
 	ee.Start(":555")
 
 }

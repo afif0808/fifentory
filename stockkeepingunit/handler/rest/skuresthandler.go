@@ -10,6 +10,8 @@ import (
 	productsqlrepo "fifentory/product/repository/sql"
 	skuoutrepo "fifentory/skuout/repository"
 	skuoutsqlrepo "fifentory/skuout/repository/sql"
+	"fifentory/skuprice"
+	skupricerepo "fifentory/skuprice/repository"
 	skupricesqlrepo "fifentory/skuprice/repository/sql"
 	"fifentory/skuvariant"
 	skuvariantrepo "fifentory/skuvariant/repository"
@@ -38,14 +40,15 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	createStock := stocksqlrepo.CreateStock(conn)
 	createSKU := skusqlrepo.CreateSKU(conn)
 	createSKUVariant := skuvariantsqlrepo.CreateSKUVariant(conn)
-	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct, createSKUVariant))
+	createSKUPrice := skupricesqlrepo.CreateSKUPrice(conn)
+	ee.POST("/skus", CreateSKUs(createSKU, createStock, createProduct, createSKUVariant, createSKUPrice))
 	// getCategoryById := categorysqlrepo.GetCategoryByID(conn)
 	// getProductCategories := categorysqlrepo.GetProductCategories(conn, getCategoryById)
 	getProductByID := productsqlrepo.GetProductByID(conn)
 	getProducts := productsqlrepo.GetProducts(conn)
 	getSKUs := skusqlrepo.GetSKUs(conn)
 	getSKUStockBySKUID := stocksqlrepo.GetSKUStockBySKUID(conn)
-	ee.GET("/skus", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
+	ee.GET("/skus3", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
 
 	skuSQLFetcher := skusqlrepo.NewSKUSQLFetcher(conn)
 
@@ -59,7 +62,7 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 
 	skuSQLFetcher.Receiver.Price = sp
 
-	ee.GET("/skus3", GetSKUs3(skuSQLFetcher.Fetch))
+	ee.GET("/skus", GetSKUs3(skuSQLFetcher.Fetch))
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
 	deleteStockBySKUID := stocksqlrepo.DeleteStockBySKUID(conn)
@@ -84,6 +87,7 @@ type createSKUPost struct {
 	Product  *product.Product                   `json:"product" validate:"required"`
 	Stock    *stock.Stock                       `json:"stock" validate:"required"`
 	SKU      *stockkeepingunit.StockKeepingUnit `json:"sku" validate:"required"`
+	Price    *skuprice.SKUPrice                 `json:"price" validate:"required"`
 	Variants []skuvariant.SKUVariant            `json:"variants"`
 }
 
@@ -96,6 +100,7 @@ func CreateSKUs(
 	createStock stockrepo.CreateSKUStockFunc,
 	createProduct productrepo.CreateProductFunc,
 	createSKUVariant skuvariantrepo.CreateSKUVariantFunc,
+	createSKUPrice skupricerepo.CrateSKUPriceFunc,
 ) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
 		ctx := ectx.Request().Context()
@@ -114,7 +119,6 @@ func CreateSKUs(
 			if err != nil {
 				return ectx.JSON(http.StatusBadRequest, err)
 			}
-
 			// if given product id is zero then the product haven't been created yet
 			// so create the product
 			if post.Product.ID == 0 {
@@ -132,11 +136,22 @@ func CreateSKUs(
 			}
 
 			post.Stock.SKUID = post.SKU.ID
+			post.Price.SKUID = post.SKU.ID
+
 			*post.Stock, err = createStock(ctx, *post.Stock)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+			*post.Price, err = createSKUPrice(ctx, *post.Price)
+			if err != nil {
+				return ectx.JSON(http.StatusInternalServerError, err)
+			}
+
 			for _, v := range post.Variants {
 				v.SKUID = post.SKU.ID
 				createSKUVariant(ctx, v)
 			}
+
 		}
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, err)
