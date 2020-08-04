@@ -1,6 +1,7 @@
 package skuresthandler
 
 import (
+	"fifentory/skuimage/repository/sql"
 	"context"
 	"database/sql"
 	"fifentory/models"
@@ -8,6 +9,7 @@ import (
 	"fifentory/product"
 	productrepo "fifentory/product/repository"
 	productsqlrepo "fifentory/product/repository/sql"
+	skuimagerepo "fifentory/skuimage/repository"
 	skuoutrepo "fifentory/skuout/repository"
 	skuoutsqlrepo "fifentory/skuout/repository/sql"
 	"fifentory/skuprice"
@@ -48,6 +50,7 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	getProducts := productsqlrepo.GetProducts(conn)
 	getSKUs := skusqlrepo.GetSKUs(conn)
 	getSKUStockBySKUID := stocksqlrepo.GetSKUStockBySKUID(conn)
+
 	ee.GET("/skus3", GetSKUs(getProducts, getSKUs, getSKUStockBySKUID))
 
 	skuSQLFetcher := skusqlrepo.NewSKUSQLFetcher(conn)
@@ -61,8 +64,10 @@ func InjectSKURESTHandler(conn *sql.DB, ee *echo.Echo) {
 	sp := skupricesqlrepo.SKUPriceSQLJoin(&skuSQLFetcher)
 
 	skuSQLFetcher.Receiver.Price = sp
+	
+	simsf := skuimagesqlrepo.NewSKUImageSQLFetcher(conn)
 
-	ee.GET("/skus", GetSKUs3(skuSQLFetcher.Fetch))
+	ee.GET("/skus", GetSKUs3(skuSQLFetcher.Fetch,simsf.Fetch))
 
 	deleteSKUByID := skusqlrepo.DeleteSKUById(conn)
 	deleteStockBySKUID := stocksqlrepo.DeleteStockBySKUID(conn)
@@ -208,6 +213,7 @@ func GetSKUs2(
 
 func GetSKUs3(
 	getSKUs skurepo.GetSKUsFunc,
+	getSKUImages skuimagerepo.GetSKUImagesFunc,
 ) echo.HandlerFunc {
 	return func(ectx echo.Context) error {
 		ctx := ectx.Request().Context()
@@ -231,6 +237,23 @@ func GetSKUs3(
 		if err != nil {
 			return ectx.JSON(http.StatusInternalServerError, models.RESTErrorResponse{Message: err.Error()})
 		}
+
+		for i, sku := range skus {
+			opts := options.Options{
+				Filters: []options.Filter{
+					options.Filter{
+						By:       "sku_id",
+						Operator: "=",
+						Value:    sku.ID,
+					},
+				},
+			}
+			sims, _ := getSKUImages(ctx, &opts)
+			if sims != nil && len(sims) > 0 {
+				skus[i].Images = sims
+			}
+		}
+
 		return ectx.JSON(http.StatusOK, skus)
 	}
 }
@@ -291,6 +314,7 @@ func GetSKUs(
 				completeSKUs = append(completeSKUs, cSKU)
 			}
 		}
+
 		return ectx.JSON(http.StatusOK, completeSKUs)
 	}
 }

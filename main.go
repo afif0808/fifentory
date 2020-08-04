@@ -14,6 +14,8 @@ import (
 	stockresthandler "fifentory/stock/handler/rest"
 	skuresthandler "fifentory/stockkeepingunit/handler/rest"
 
+	imagehandler "fifentory/image/handler"
+	skuimageresthandler "fifentory/skuimage/handler/rest"
 	skuspreadsheethandler "fifentory/stockkeepingunit/handler/spreadsheet"
 	variantresthandler "fifentory/variant/handler/rest"
 	variantgroupresthandler "fifentory/variantgroup/handler/rest"
@@ -59,7 +61,8 @@ func main() {
 	variantresthandler.InjectVariantRESTHandler(conn, ee)
 	variantgroupresthandler.InjectVariantGroupRESTHandler(conn, ee)
 	skuspreadsheethandler.InjectSKUSpreadSheetHandler(conn, ee)
-	skupriceresthandler.InjectSKUPriceRESTHandler(conn,ee)
+	skupriceresthandler.InjectSKUPriceRESTHandler(conn, ee)
+	imagehandler.InjectImagesHandler(conn, ee)
+	skuimageresthandler.InjectSKUImageRESTHandler(conn, ee)
 	ee.Start(":555")
-
 }

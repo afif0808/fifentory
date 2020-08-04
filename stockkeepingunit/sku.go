@@ -2,6 +2,7 @@ package stockkeepingunit
 
 import (
 	"fifentory/product"
+	"fifentory/skuimage"
 	"fifentory/skuprice"
 	"fifentory/stock"
 	"time"
@@ -22,10 +23,11 @@ type CompleteSKU struct {
 }
 
 type SKU struct {
-	ID        int64              `json:"id"`
-	Code      string             `json:"code"`
-	CreatedAt time.Time          `json:"created_at"`
-	Product   *product.Product   `json:"product,omitempty" `
-	Stock     *stock.Stock       `json:"stock,omitempty" `
-	Price     *skuprice.SKUPrice `json:"price,omitempty"`
+	ID        int64               `json:"id"`
+	Code      string              `json:"code"`
+	CreatedAt time.Time           `json:"created_at"`
+	Product   *product.Product    `json:"product,omitempty" `
+	Stock     *stock.Stock        `json:"stock,omitempty" `
+	Price     *skuprice.SKUPrice  `json:"price,omitempty"`
+	Images    []skuimage.SKUImage `json:"images,omitempty"`
 }

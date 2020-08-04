@@ -10,11 +10,18 @@ import (
 	"fifentory/stockkeepingunit"
 )
 
+type receiver struct {
+	SKU     *stockkeepingunit.SKU
+	Product *product.Product
+	Stock   *stock.Stock
+	Price   *skuprice.SKUPrice
+}
+
 type SKUSQLFetcher struct {
 	joins    string
 	fields   string
 	scanDest []interface{}
-	Receiver *stockkeepingunit.SKU // used as receiver
+	Receiver *receiver // used as receiver
 	conn     *sql.DB
 }
 
@@ -33,15 +40,15 @@ func (skuf *SKUSQLFetcher) Fetch(ctx context.Context, opts *options.Options) ([]
 			return nil, err
 		}
 		sku := stockkeepingunit.SKU{
-			ID:        skuf.Receiver.ID,
-			Code:      skuf.Receiver.Code,
-			CreatedAt: skuf.Receiver.CreatedAt,
+			ID:        skuf.Receiver.SKU.ID,
+			Code:      skuf.Receiver.SKU.Code,
+			CreatedAt: skuf.Receiver.SKU.CreatedAt,
 		}
 		if skuf.Receiver.Product != nil {
 			pd := product.Product{
 				ID:        skuf.Receiver.Product.ID,
 				Name:      skuf.Receiver.Product.Name,
-				CreatedAt: skuf.Receiver.CreatedAt,
+				CreatedAt: skuf.Receiver.Product.CreatedAt,
 			}
 			sku.Product = &pd
 		}
@@ -61,6 +68,7 @@ func (skuf *SKUSQLFetcher) Fetch(ctx context.Context, opts *options.Options) ([]
 			}
 			sku.Price = &pr
 		}
+
 		skus = append(skus, sku)
 	}
 	return skus, nil
@@ -70,10 +78,10 @@ func NewSKUSQLFetcher(conn *sql.DB) SKUSQLFetcher {
 	sf := SKUSQLFetcher{
 		joins:    "",
 		fields:   "sku.id , sku.code , sku.created_at",
-		Receiver: &stockkeepingunit.SKU{},
+		Receiver: &receiver{SKU: &stockkeepingunit.SKU{}},
 		conn:     conn,
 	}
-	sf.scanDest = []interface{}{&sf.Receiver.ID, &sf.Receiver.Code, &sf.Receiver.CreatedAt}
+	sf.scanDest = []interface{}{&sf.Receiver.SKU.ID, &sf.Receiver.SKU.Code, &sf.Receiver.SKU.CreatedAt}
 	return sf
 
 }

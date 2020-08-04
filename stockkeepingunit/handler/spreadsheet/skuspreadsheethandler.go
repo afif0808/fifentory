@@ -156,6 +156,6 @@ func GetSKUs(
 		}
 		ectx.Response().Header().Set("Content-Disposition", "attachment; filename="+fileName)
 
-		return ectx.File("/media/afif0808/data/go/src/fifentory/assets/spreadsheets/skureport.xlsx")
+		return ectx.File(fileLocation + fileName)
 	}
 }
